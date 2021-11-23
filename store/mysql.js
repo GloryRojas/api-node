@@ -1,7 +1,6 @@
 const mysql = require('mysql');
 
 const config = require('../config');
-const {reject} = require("bcrypt/promises");
 
 const dbconf = {
   host: config.mysql.host,
@@ -43,7 +42,6 @@ async function get (table, id) {
   console.log({table, id})
   return new Promise((resolve, reject) => {
     connection.query(`SELECT * FROM ${table} WHERE id=${id}`, (err, data) => {
-      console.log('get',{err, data})
       if(err) return reject();
       resolve(data)
     })
@@ -53,7 +51,6 @@ async function get (table, id) {
 async function update (table, data) {
   return new Promise((resolve, reject) => {
     connection.query(`UPDATE ${table} SET ? WHERE id=?`, [data, data.id] , (err, result) => {
-      console.log('update',err, result)
       if(err) return reject();
       resolve(result)
     })
@@ -79,10 +76,16 @@ async function upsert (table, data) {
   }
 }
 
-async function query (table, query) {
+async function query (table, query, join) {
+  let joinQuery = '';
+  if(join) {
+    const key = Object.keys(join)[0];
+    const val = join[key];
+    joinQuery = `JOIN ${key} ON ${table}.${val} = ${key}.id`;
+  }
+
   return new Promise((resolve, reject) => {
-    connection.query(`SELECT * FROM ${table} WHERE ?`, query , (err, result) => {
-      console.log('query',{err, result})
+    connection.query(`SELECT * FROM ${table} ${joinQuery} WHERE ${table}.?`, query , (err, result) => {
       if(err) return reject(err);
       resolve(result[0] || null)
     })
@@ -93,5 +96,6 @@ module.exports = {
   list,
   get,
   upsert,
-  query
+  query,
+  insert
 }
